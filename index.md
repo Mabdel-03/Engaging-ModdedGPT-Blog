@@ -10,7 +10,7 @@ A minimalist guide for MIT researchers who want to run the modded-nanogpt challe
 <div class="card" markdown="1">
 ## Start Here
 
-- Read the full guide: [From zero to speedrun on Engaging]({% post_url 2026-02-15-modded-nanogpt-on-engaging %})
+- Read the full guide: [From zero to speedrun on Engaging]({{ '/modded-nanogpt-on-engaging/' | relative_url }})
 - Source repo for cluster scripts: [Engaging-NanoGPT](https://github.com/Mabdel-03/Engaging-NanoGPT)
 - Upstream projects:
   - [karpathy/nanoGPT](https://github.com/karpathy/nanoGPT)
