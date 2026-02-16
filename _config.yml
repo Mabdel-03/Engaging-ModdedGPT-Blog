@@ -1,0 +1,11 @@
+title: Engaging ModdedGPT Blog
+description: A practical setup guide for MIT researchers running modded-nanogpt on Engaging.
+url: "https://mabdel-03.github.io"
+baseurl: "/Engaging-ModdedGPT-Blog"
+markdown: kramdown
+permalink: /:title/
+timezone: America/New_York
+kramdown:
+  input: GFM
+exclude:
+  - README.md
