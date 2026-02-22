@@ -129,15 +129,15 @@ Custom GPU count launch:
 ```bash
 # 1x H100
 GPU_TYPE=h100 NUM_GPUS=1 \
-sbatch --gres=gpu:${GPU_TYPE}:${NUM_GPUS} slurm/modded/train_speedrun.sh
+sbatch --gres=gpu:${GPU_TYPE}:${NUM_GPUS} --cpus-per-task=16 slurm/modded/train_speedrun.sh
 
 # 2x H100
 GPU_TYPE=h100 NUM_GPUS=2 \
-sbatch --gres=gpu:${GPU_TYPE}:${NUM_GPUS} slurm/modded/train_speedrun.sh
+sbatch --gres=gpu:${GPU_TYPE}:${NUM_GPUS} --cpus-per-task=32 slurm/modded/train_speedrun.sh
 
 # 4x H100
 GPU_TYPE=h100 NUM_GPUS=4 \
-sbatch --gres=gpu:${GPU_TYPE}:${NUM_GPUS} slurm/modded/train_speedrun.sh
+sbatch --gres=gpu:${GPU_TYPE}:${NUM_GPUS} --cpus-per-task=64 slurm/modded/train_speedrun.sh
 
 # 8x H100
 GPU_TYPE=h100 NUM_GPUS=8 \
