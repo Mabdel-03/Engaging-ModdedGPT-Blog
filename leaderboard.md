@@ -23,7 +23,6 @@ Leaderboard for Poggio Lab experiments on Engaging. Sign in with Google and wait
 
 <section id="submission-section" class="card hidden">
   <h2>Submit a Run</h2>
-  <p class="muted">Use the same fields as the public record table.</p>
 
   <form id="run-form">
     <label for="time-to-328">Record Time (seconds)</label>
