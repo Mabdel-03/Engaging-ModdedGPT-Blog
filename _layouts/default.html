@@ -13,14 +13,15 @@
     <meta name="description" content="{{ page.excerpt | default: site.description | strip_html | strip_newlines | escape }}" />
     <link rel="stylesheet" href="{{ '/assets/css/main.css' | relative_url }}" />
   </head>
-  <body>
+  <body class="{% if page.url == '/' %}is-home{% endif %}">
     <header class="site-header">
       <div class="wrap header-inner">
         <a class="site-title" href="{{ '/' | relative_url }}">{{ site.title }}</a>
         <nav class="site-nav" aria-label="Primary">
-          <a href="{{ '/' | relative_url }}">Home</a>
-          <a href="{{ '/nanogpt-hero/' | relative_url }}">NanoGPT Guide</a>
-          <a href="{{ '/modded-nanogpt-hero/' | relative_url }}">Modded Guide</a>
+          <a href="{{ '/' | relative_url }}" {% if page.url == '/' %}aria-current="page"{% endif %}>Home</a>
+          <a href="{{ '/nanogpt-hero/' | relative_url }}" {% if page.url == '/nanogpt-hero/' %}aria-current="page"{% endif %}>NanoGPT Guide</a>
+          <a href="{{ '/modded-nanogpt-hero/' | relative_url }}" {% if page.url == '/modded-nanogpt-hero/' %}aria-current="page"{% endif %}>Modded Guide</a>
+          <a href="{{ '/leaderboard/' | relative_url }}" {% if page.url == '/leaderboard/' %}aria-current="page"{% endif %}>Leaderboard</a>
         </nav>
       </div>
     </header>
