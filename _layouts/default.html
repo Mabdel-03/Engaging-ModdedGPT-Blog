@@ -11,6 +11,9 @@
       {% endif %}
     </title>
     <meta name="description" content="{{ page.excerpt | default: site.description | strip_html | strip_newlines | escape }}" />
+    <script>
+      window.SITE_BASEURL = "{{ site.baseurl | default: '' }}";
+    </script>
     <link rel="stylesheet" href="{{ '/assets/css/main.css' | relative_url }}" />
   </head>
   <body class="{% if page.url == '/' %}is-home{% endif %}">

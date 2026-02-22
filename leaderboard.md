@@ -6,7 +6,7 @@ permalink: /leaderboard/
 
 # MIT NanoGPT Speedrun Leaderboard
 
-Leaderboard for Poggio Lab experiments on Engaging. Sign in with Google to view records; admin approval is required before you can submit runs.
+Leaderboard for Poggio Lab experiments on Engaging. Sign in with Google and wait for admin approval to view records and submit runs.
 
 <section id="leaderboard-auth" class="card">
   <h2>Sign In</h2>
@@ -54,6 +54,8 @@ Leaderboard for Poggio Lab experiments on Engaging. Sign in with Google to view 
 
 <section class="card">
   <h2>Public Record Table</h2>
+  <label for="contributor-filter">Filter by contributor</label>
+  <input id="contributor-filter" type="text" placeholder="e.g. jyoo or abrown" />
   <div id="leaderboard-table-wrap"></div>
 </section>
 
