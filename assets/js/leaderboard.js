@@ -13,6 +13,7 @@
   var submissionSection = document.getElementById("submission-section");
   var adminSection = document.getElementById("admin-section");
   var pendingApprovalsWrap = document.getElementById("pending-approvals-wrap");
+  var contributorFilterInput = document.getElementById("contributor-filter");
   var runForm = document.getElementById("run-form");
   var leaderboardTableWrap = document.getElementById("leaderboard-table-wrap");
   var allRunsCache = [];
@@ -58,6 +59,7 @@
   var client = window.supabase.createClient(supabaseUrl, supabaseAnonKey, {
     auth: { persistSession: true, autoRefreshToken: true }
   });
+  window._sb = client;
 
   function formatDate(iso) {
     if (!iso) return "-";
@@ -107,7 +109,23 @@
     }
 
     allRunsCache = result.data || [];
-    renderLeaderboard(allRunsCache);
+    applyContributorFilter();
+  }
+
+  function runContributorsText(run) {
+    return (run.contributors || "").toLowerCase().trim();
+  }
+
+  function applyContributorFilter() {
+    var filterValue = (contributorFilterInput && contributorFilterInput.value ? contributorFilterInput.value : "").trim().toLowerCase();
+    if (!filterValue) {
+      renderLeaderboard(allRunsCache);
+      return;
+    }
+    var filtered = allRunsCache.filter(function (run) {
+      return runContributorsText(run).includes(filterValue);
+    });
+    renderLeaderboard(filtered);
   }
 
   function linkOrDash(url, label) {
@@ -301,6 +319,7 @@
       if (adminSection) adminSection.classList.add("hidden");
       setAuthStatus("Not signed in.");
       setApprovalStatus("");
+      renderInfoMessage(leaderboardTableWrap, "Sign in with Google to view the leaderboard.");
       return;
     }
 
@@ -310,6 +329,7 @@
       if (adminSection) adminSection.classList.add("hidden");
       setAuthStatus("Signed in account missing email.");
       setApprovalStatus("");
+      renderInfoMessage(leaderboardTableWrap, "Signed-in account is missing email; leaderboard unavailable.");
       return;
     }
 
@@ -332,12 +352,15 @@
     if (isAdmin || approvalStatus === "approved") {
       submissionSection.classList.remove("hidden");
       setApprovalStatus("");
+      await loadRuns();
     } else if (approvalStatus === "rejected") {
       submissionSection.classList.add("hidden");
       setApprovalStatus("Your account request was rejected. Contact the leaderboard admin for access.");
+      renderInfoMessage(leaderboardTableWrap, "Leaderboard access is restricted to approved users.");
     } else {
       submissionSection.classList.add("hidden");
-      setApprovalStatus("Your account is pending admin approval. You can view records, but cannot submit yet.");
+      setApprovalStatus("Your account is pending admin approval. You cannot view or submit leaderboard entries yet.");
+      renderInfoMessage(leaderboardTableWrap, "Leaderboard access is restricted until your account is approved.");
     }
 
     if (adminSection) {
@@ -356,7 +379,11 @@
 
   async function signInWithGoogle() {
     setAuthStatus("Redirecting to Google sign-in ...");
-    var redirectTo = window.location.origin + window.location.pathname;
+    var baseUrl = window.SITE_BASEURL || "";
+    var redirectTo =
+      window.location.origin +
+      baseUrl +
+      "/auth/callback/";
     var signInResult = await client.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo: redirectTo }
@@ -425,6 +452,7 @@
 
   if (googleSignInBtn) googleSignInBtn.addEventListener("click", signInWithGoogle);
   if (signOutBtn) signOutBtn.addEventListener("click", signOut);
+  if (contributorFilterInput) contributorFilterInput.addEventListener("input", applyContributorFilter);
   if (pendingApprovalsWrap) {
     pendingApprovalsWrap.addEventListener("click", function (evt) {
       var approveTarget = evt.target && evt.target.getAttribute("data-approve");
@@ -444,5 +472,4 @@
   });
 
   getSession().then(syncAuthUI);
-  loadRuns();
 })();
