@@ -259,7 +259,17 @@ GPU_TYPE=h100 GPUS_PER_NODE=8 GRAD_ACC_STEPS=5 \
 sbatch --gres=gpu:${GPU_TYPE}:${GPUS_PER_NODE} slurm/nanogpt/train_gpt2.sh
 ```
 
-## 10) Monitoring and Troubleshooting
+## 10) Baseline Completion Criteria (Before Guide 2)
+
+Move on to the modded guide only after all of the following are true:
+
+- Your conda environment activates cleanly via `source activate_env.sh`.
+- Shakespeare sanity training completed and produced logs/checkpoints.
+- OpenWebText prep completed without dataset path errors.
+- At least one GPT-2 training launch succeeded end-to-end (any valid GPU count).
+- You can monitor jobs with `squeue` and `sacct` and read the relevant log files.
+
+## 11) Monitoring and Troubleshooting
 
 Use this daily monitoring loop:
 
@@ -301,7 +311,7 @@ python -c "import torch; print(torch.__version__)"
 - **OOM errors**
   - Reduce model/batch/sequence/accumulation for exploratory runs.
 
-- **FineWeb prep download hiccups**
+- **OpenWebText prep download hiccups**
   - Retry in a fresh job; transient network failures happen.
 
 ---

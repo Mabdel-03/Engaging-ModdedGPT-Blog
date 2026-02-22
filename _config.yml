@@ -5,6 +5,8 @@ baseurl: "/Engaging-ModdedGPT-Blog"
 markdown: kramdown
 permalink: /:title/
 timezone: America/New_York
+supabase_url: "https://hgezhsowngqmvxrjaxde.supabase.co"
+supabase_anon_key: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhnZXpoc293bmdxbXZ4cmpheGRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE2ODE1MTUsImV4cCI6MjA4NzI1NzUxNX0.Uf300INDPzfpSN111IKoq9v85iEMdMcj3zTp4sPfKUI"
 kramdown:
   input: GFM
 exclude:

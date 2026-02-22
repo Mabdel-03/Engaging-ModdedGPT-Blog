@@ -7,6 +7,8 @@ permalink: /modded-nanogpt-hero/
 
 This guide focuses on the modded speedrun path. It assumes you already completed the baseline setup flow in [From Zero to NanoGPT Hero on MIT Engaging]({{ '/nanogpt-hero/' | relative_url }}).
 
+If baseline is not yet stable, stop here and finish Guide 1 first.
+
 Primary training repo used in this guide:
 
 - [Mabdel-03/Engaging-NanoGPT](https://github.com/Mabdel-03/Engaging-NanoGPT)
@@ -127,15 +129,15 @@ Custom GPU count launch:
 ```bash
 # 1x H100
 GPU_TYPE=h100 NUM_GPUS=1 \
-sbatch --gres=gpu:${GPU_TYPE}:${NUM_GPUS} slurm/modded/train_speedrun.sh
+sbatch --gres=gpu:${GPU_TYPE}:${NUM_GPUS} --cpus-per-task=16 slurm/modded/train_speedrun.sh
 
 # 2x H100
 GPU_TYPE=h100 NUM_GPUS=2 \
-sbatch --gres=gpu:${GPU_TYPE}:${NUM_GPUS} slurm/modded/train_speedrun.sh
+sbatch --gres=gpu:${GPU_TYPE}:${NUM_GPUS} --cpus-per-task=32 slurm/modded/train_speedrun.sh
 
 # 4x H100
 GPU_TYPE=h100 NUM_GPUS=4 \
-sbatch --gres=gpu:${GPU_TYPE}:${NUM_GPUS} slurm/modded/train_speedrun.sh
+sbatch --gres=gpu:${GPU_TYPE}:${NUM_GPUS} --cpus-per-task=64 slurm/modded/train_speedrun.sh
 
 # 8x H100
 GPU_TYPE=h100 NUM_GPUS=8 \
@@ -152,6 +154,7 @@ sbatch --gres=gpu:${GPU_TYPE}:${NUM_GPUS} slurm/modded/train_speedrun.sh
 Important:
 
 - This vendored script expects `world_size` in `{1, 2, 4, 8}`.
+- Recommended rollout is `1 -> 2/4 -> 8` GPUs so you catch config/runtime failures early.
 
 ## 8) Exact Command Sequence for the Modded Path
 
@@ -178,7 +181,33 @@ GPU_TYPE=h100 NUM_GPUS=8 \
 sbatch --gres=gpu:${GPU_TYPE}:${NUM_GPUS} slurm/modded/train_speedrun.sh
 ```
 
-## 9) Monitoring and Troubleshooting
+## 9) Submission Checklist (For Lab Leaderboard)
+
+Submit your results on the [MIT Leaderboard]({{ '/leaderboard/' | relative_url }}).
+
+Before submitting, prepare the same simple fields used by the public record table.
+
+Required fields:
+
+- Record time in seconds.
+- Short run description (what changed).
+- Log URL.
+
+Optional field:
+
+- Contributors (comma-separated).
+
+Prerequisite:
+
+- Complete a modded NanoGPT run under this guide workflow.
+
+Recommended local notes for your own reproducibility:
+
+- SLURM job ID and run timestamp.
+- Commit hash and config diff used.
+- Any caveats about partition behavior or interruptions.
+
+## 10) Monitoring and Troubleshooting
 
 Daily monitoring:
 
