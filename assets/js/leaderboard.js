@@ -25,6 +25,7 @@
   var gpuCountInput = document.getElementById("gpu-count");
   var leaderboardTableWrap = document.getElementById("leaderboard-table-wrap");
   var allRunsCache = [];
+  var hardwareColumnsAvailable = true;
 
   function setAuthStatus(message) {
     if (authStatusEl) authStatusEl.textContent = message;
@@ -60,6 +61,23 @@
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#39;");
+  }
+
+  function runsColumnMissingError(error, columnName) {
+    if (!error || !columnName) return false;
+    var needle = String(columnName || "").toLowerCase();
+    var message = String(error.message || "").toLowerCase();
+    var details = String(error.details || "").toLowerCase();
+    var combined = message + " " + details;
+    return (
+      combined.indexOf("could not find the '" + needle + "' column") !== -1 ||
+      combined.indexOf("column runs." + needle + " does not exist") !== -1 ||
+      (String(error.code || "") === "42703" && combined.indexOf(needle) !== -1)
+    );
+  }
+
+  function missingHardwareColumnsError(error) {
+    return runsColumnMissingError(error, "gpu_count") || runsColumnMissingError(error, "gpu_type");
   }
 
   if (!supabaseUrl || !supabaseAnonKey) {
@@ -115,12 +133,25 @@
       .select("id, account_email, display_name, time_to_3_28_sec, run_description, contributors, gpu_type, gpu_count, created_at")
       .order("created_at", { ascending: false });
 
+    hardwareColumnsAvailable = !result.error;
+
+    if (result.error && missingHardwareColumnsError(result.error)) {
+      hardwareColumnsAvailable = false;
+      result = await client
+        .from("runs")
+        .select("id, account_email, display_name, time_to_3_28_sec, run_description, contributors, created_at")
+        .order("created_at", { ascending: false });
+    }
+
     if (result.error) {
       renderInfoMessage(leaderboardTableWrap, "Failed to load leaderboard: " + result.error.message);
       return;
     }
 
-    allRunsCache = result.data || [];
+    allRunsCache = (result.data || []).map(function (run) {
+      if (hardwareColumnsAvailable) return run;
+      return Object.assign({}, run, { gpu_type: null, gpu_count: null });
+    });
     applyContributorFilter();
   }
 
@@ -542,6 +573,7 @@
       track: "modded-nanogpt",
       run_description: (document.getElementById("run-description").value || "").trim(),
       contributors: (document.getElementById("contributors").value || "").trim() || null,
+      run_log_url: "inline-slurm-out",
       gpu_type: gpuType,
       gpu_count: Math.round(gpuCount),
       time_to_3_28_sec: parsedSeconds
@@ -553,6 +585,20 @@
     }
 
     var insertResult = await client.from("runs").insert(payload);
+    if (insertResult.error && missingHardwareColumnsError(insertResult.error)) {
+      var fallbackPayload = Object.assign({}, payload);
+      delete fallbackPayload.gpu_type;
+      delete fallbackPayload.gpu_count;
+      insertResult = await client.from("runs").insert(fallbackPayload);
+      if (!insertResult.error) {
+        hardwareColumnsAvailable = false;
+        runForm.reset();
+        setParseStatus("");
+        setSubmitStatus("Run submitted. Hardware columns are not available in DB yet, so hardware was not saved for this entry.");
+        await loadRuns();
+        return;
+      }
+    }
     if (insertResult.error) {
       setSubmitStatus("Submission failed: " + insertResult.error.message);
       return;
