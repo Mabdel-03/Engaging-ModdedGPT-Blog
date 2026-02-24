@@ -16,6 +16,7 @@ A practical two-guide path for MIT researchers on Engaging:
 ## Start Here
 
 <div class="home-path" markdown="1">
+- Step 0: [Getting Started on MIT Engaging]({{ '/getting-started/' | relative_url }})
 - Step 1: [From Zero to NanoGPT Hero]({{ '/nanogpt-hero/' | relative_url }})
 - Step 2: [From Zero to Modded NanoGPT Hero]({{ '/modded-nanogpt-hero/' | relative_url }})
 - Step 3: [MIT Leaderboard]({{ '/leaderboard/' | relative_url }}) for submitting and comparing run times (Google sign-in and admin approval required before submission)

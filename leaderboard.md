@@ -6,7 +6,7 @@ permalink: /leaderboard/
 
 # MIT NanoGPT Speedrun Leaderboard
 
-Leaderboard for Poggio Lab experiments on Engaging. Sign in with Google and wait for admin approval to view records and submit runs.
+Leaderboard for Poggio Lab experiments on Engaging. Anyone can view records. Sign in with Google and receive admin approval to submit runs. You can paste SLURM log output to auto-parse record time.
 
 <section id="leaderboard-auth" class="card">
   <h2>Sign In</h2>
@@ -25,6 +25,13 @@ Leaderboard for Poggio Lab experiments on Engaging. Sign in with Google and wait
   <h2>Submit a Run</h2>
 
   <form id="run-form">
+    <label for="run-log-paste">Paste SLURM Log Output (optional)</label>
+    <textarea id="run-log-paste" rows="8" placeholder="Paste your .out log here, then click Parse Log for Record Time."></textarea>
+    <div class="leaderboard-submit-actions">
+      <button id="parse-log-btn" class="button secondary" type="button">Parse Log for Record Time</button>
+    </div>
+    <p id="parse-status" class="muted"></p>
+
     <label for="time-to-328">Record Time (seconds)</label>
     <input id="time-to-328" type="number" min="0" step="0.01" placeholder="214.83" required />
 

@@ -22,6 +22,7 @@
         <a class="site-title" href="{{ '/' | relative_url }}">{{ site.title }}</a>
         <nav class="site-nav" aria-label="Primary">
           <a href="{{ '/' | relative_url }}" {% if page.url == '/' %}aria-current="page"{% endif %}>Home</a>
+          <a href="{{ '/getting-started/' | relative_url }}" {% if page.url == '/getting-started/' %}aria-current="page"{% endif %}>Getting Started</a>
           <a href="{{ '/nanogpt-hero/' | relative_url }}" {% if page.url == '/nanogpt-hero/' %}aria-current="page"{% endif %}>NanoGPT Guide</a>
           <a href="{{ '/modded-nanogpt-hero/' | relative_url }}" {% if page.url == '/modded-nanogpt-hero/' %}aria-current="page"{% endif %}>Modded Guide</a>
           <a href="{{ '/leaderboard/' | relative_url }}" {% if page.url == '/leaderboard/' %}aria-current="page"{% endif %}>Leaderboard</a>

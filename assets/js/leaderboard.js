@@ -8,6 +8,7 @@
   var authStatusEl = document.getElementById("auth-status");
   var approvalStatusEl = document.getElementById("approval-status");
   var submitStatusEl = document.getElementById("submit-status");
+  var parseStatusEl = document.getElementById("parse-status");
   var googleSignInBtn = document.getElementById("google-signin-btn");
   var signOutBtn = document.getElementById("signout-btn");
   var submissionSection = document.getElementById("submission-section");
@@ -15,6 +16,9 @@
   var pendingApprovalsWrap = document.getElementById("pending-approvals-wrap");
   var contributorFilterInput = document.getElementById("contributor-filter");
   var runForm = document.getElementById("run-form");
+  var parseLogBtn = document.getElementById("parse-log-btn");
+  var runLogPasteInput = document.getElementById("run-log-paste");
+  var recordTimeInput = document.getElementById("time-to-328");
   var leaderboardTableWrap = document.getElementById("leaderboard-table-wrap");
   var allRunsCache = [];
 
@@ -24,6 +28,10 @@
 
   function setSubmitStatus(message) {
     if (submitStatusEl) submitStatusEl.textContent = message;
+  }
+
+  function setParseStatus(message) {
+    if (parseStatusEl) parseStatusEl.textContent = message;
   }
 
   function setApprovalStatus(message) {
@@ -131,6 +139,57 @@
   function linkOrDash(url, label) {
     if (!url) return "-";
     return "<a href='" + url + "' target='_blank' rel='noopener noreferrer'>" + label + "</a>";
+  }
+
+  function parseRecordTimeFromLog(logText) {
+    if (!logText || !logText.trim()) {
+      return { ok: false, message: "Paste log content first." };
+    }
+
+    var lines = String(logText).split(/\r?\n/);
+    var linePattern = /val_loss:([0-9]*\.?[0-9]+)\s+train_time:([0-9]+)ms/i;
+
+    for (var i = 0; i < lines.length; i++) {
+      var match = lines[i].match(linePattern);
+      if (!match) continue;
+      var valLoss = Number(match[1]);
+      var trainMs = Number(match[2]);
+      if (Number.isNaN(valLoss) || Number.isNaN(trainMs)) continue;
+      if (valLoss <= 3.28) {
+        return {
+          ok: true,
+          valLoss: valLoss,
+          trainMs: trainMs,
+          lineNumber: i + 1
+        };
+      }
+    }
+
+    return { ok: false, message: "No val_loss <= 3.28 found in log." };
+  }
+
+  function parseLogAndFillRecordTime() {
+    var result = parseRecordTimeFromLog(runLogPasteInput ? runLogPasteInput.value : "");
+    if (!result.ok) {
+      setParseStatus(result.message);
+      return;
+    }
+
+    var seconds = result.trainMs / 1000;
+    if (recordTimeInput) {
+      recordTimeInput.value = seconds.toFixed(2);
+    }
+    setParseStatus(
+      "Parsed line " +
+      result.lineNumber +
+      ": val_loss " +
+      result.valLoss.toFixed(4) +
+      ", train_time " +
+      result.trainMs +
+      "ms (" +
+      seconds.toFixed(2) +
+      " seconds)."
+    );
   }
 
   function renderLeaderboard(runs) {
@@ -312,14 +371,15 @@
   }
 
   async function syncAuthUI(session) {
+    await loadRuns();
+
     if (!session || !session.user) {
       submissionSection.classList.add("hidden");
       signOutBtn.classList.add("hidden");
       googleSignInBtn.classList.remove("hidden");
       if (adminSection) adminSection.classList.add("hidden");
-      setAuthStatus("Not signed in.");
+      setAuthStatus("Not signed in. Public leaderboard is visible; sign in to submit runs.");
       setApprovalStatus("");
-      renderInfoMessage(leaderboardTableWrap, "Sign in with Google to view the leaderboard.");
       return;
     }
 
@@ -329,7 +389,6 @@
       if (adminSection) adminSection.classList.add("hidden");
       setAuthStatus("Signed in account missing email.");
       setApprovalStatus("");
-      renderInfoMessage(leaderboardTableWrap, "Signed-in account is missing email; leaderboard unavailable.");
       return;
     }
 
@@ -352,15 +411,12 @@
     if (isAdmin || approvalStatus === "approved") {
       submissionSection.classList.remove("hidden");
       setApprovalStatus("");
-      await loadRuns();
     } else if (approvalStatus === "rejected") {
       submissionSection.classList.add("hidden");
       setApprovalStatus("Your account request was rejected. Contact the leaderboard admin for access.");
-      renderInfoMessage(leaderboardTableWrap, "Leaderboard access is restricted to approved users.");
     } else {
       submissionSection.classList.add("hidden");
-      setApprovalStatus("Your account is pending admin approval. You cannot view or submit leaderboard entries yet.");
-      renderInfoMessage(leaderboardTableWrap, "Leaderboard access is restricted until your account is approved.");
+      setApprovalStatus("Your account is pending admin approval. You can view the leaderboard, but cannot submit runs yet.");
     }
 
     if (adminSection) {
@@ -430,7 +486,7 @@
       track: "modded-nanogpt",
       run_description: (document.getElementById("run-description").value || "").trim(),
       contributors: (document.getElementById("contributors").value || "").trim() || null,
-      time_to_3_28_sec: document.getElementById("time-to-328").value ? Number(document.getElementById("time-to-328").value) : null,
+      time_to_3_28_sec: recordTimeInput && recordTimeInput.value ? Number(recordTimeInput.value) : null,
       run_log_url: (document.getElementById("run-log-url").value || "").trim() || null
     };
 
@@ -446,12 +502,14 @@
     }
 
     runForm.reset();
+    setParseStatus("");
     setSubmitStatus("Run submitted.");
     await loadRuns();
   }
 
   if (googleSignInBtn) googleSignInBtn.addEventListener("click", signInWithGoogle);
   if (signOutBtn) signOutBtn.addEventListener("click", signOut);
+  if (parseLogBtn) parseLogBtn.addEventListener("click", parseLogAndFillRecordTime);
   if (contributorFilterInput) contributorFilterInput.addEventListener("input", applyContributorFilter);
   if (pendingApprovalsWrap) {
     pendingApprovalsWrap.addEventListener("click", function (evt) {
