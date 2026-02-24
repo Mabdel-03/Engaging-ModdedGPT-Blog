@@ -6,7 +6,7 @@ permalink: /leaderboard/
 
 # MIT NanoGPT Speedrun Leaderboard
 
-Leaderboard for Poggio Lab experiments on Engaging. Anyone can view records. Sign in with Google and receive admin approval to submit runs. You can paste SLURM log output to auto-parse record time.
+Leaderboard for Poggio Lab experiments on Engaging. Anyone can view records. Sign in with Google and receive admin approval to submit runs. For submissions, paste your `.out` SLURM log content; no log URL is required.
 
 <section id="leaderboard-auth" class="card">
   <h2>Sign In</h2>
@@ -25,8 +25,8 @@ Leaderboard for Poggio Lab experiments on Engaging. Anyone can view records. Sig
   <h2>Submit a Run</h2>
 
   <form id="run-form">
-    <label for="run-log-paste">Paste SLURM Log Output (optional)</label>
-    <textarea id="run-log-paste" rows="8" placeholder="Paste your .out log here, then click Parse Log for Record Time."></textarea>
+    <label for="run-log-paste">Paste SLURM Log Output</label>
+    <textarea id="run-log-paste" rows="8" placeholder="Paste your .out log here, then click Parse Log for Record Time." required></textarea>
     <div class="leaderboard-submit-actions">
       <button id="parse-log-btn" class="button secondary" type="button">Parse Log for Record Time</button>
     </div>
@@ -37,9 +37,6 @@ Leaderboard for Poggio Lab experiments on Engaging. Anyone can view records. Sig
 
     <label for="run-description">Description</label>
     <input id="run-description" type="text" placeholder="Example: Added sparse attention gate + tuned batch schedule" required />
-
-    <label for="run-log-url">Log URL</label>
-    <input id="run-log-url" type="url" placeholder="https://..." required />
 
     <label for="contributors">Contributors (comma-separated, optional)</label>
     <input id="contributors" type="text" placeholder="jyoo, abrown, cchen" />

@@ -108,7 +108,7 @@
   async function loadRuns() {
     var result = await client
       .from("runs")
-      .select("id, account_email, display_name, time_to_3_28_sec, run_description, run_log_url, contributors, created_at")
+      .select("id, account_email, display_name, time_to_3_28_sec, run_description, contributors, created_at")
       .order("created_at", { ascending: false });
 
     if (result.error) {
@@ -134,11 +134,6 @@
       return runContributorsText(run).includes(filterValue);
     });
     renderLeaderboard(filtered);
-  }
-
-  function linkOrDash(url, label) {
-    if (!url) return "-";
-    return "<a href='" + url + "' target='_blank' rel='noopener noreferrer'>" + label + "</a>";
   }
 
   function parseRecordTimeFromLog(logText) {
@@ -217,7 +212,6 @@
           "<td>" + formatRecordTime(run.time_to_3_28_sec) + "</td>" +
           "<td>" + (run.run_description || "-") + "</td>" +
           "<td>" + formatDate(run.created_at) + "</td>" +
-          "<td>" + linkOrDash(run.run_log_url, "log") + "</td>" +
           "<td>" + (run.contributors || run.display_name || run.account_email || "-") + "</td>" +
           "</tr>"
         );
@@ -226,7 +220,7 @@
 
     leaderboardTableWrap.innerHTML =
       "<table><thead><tr>" +
-      "<th>#</th><th>Record time</th><th>Description</th><th>Date</th><th>Log</th><th>Contributors</th>" +
+      "<th>#</th><th>Record time</th><th>Description</th><th>Date</th><th>Contributors</th>" +
       "</tr></thead><tbody>" +
       rows +
       "</tbody></table>";
@@ -479,6 +473,29 @@
       return;
     }
 
+    var pastedLog = runLogPasteInput && runLogPasteInput.value ? runLogPasteInput.value : "";
+    var parsed = parseRecordTimeFromLog(pastedLog);
+    if (!parsed.ok) {
+      setSubmitStatus(parsed.message);
+      return;
+    }
+
+    var parsedSeconds = Number((parsed.trainMs / 1000).toFixed(2));
+    if (recordTimeInput) {
+      recordTimeInput.value = parsedSeconds.toFixed(2);
+    }
+    setParseStatus(
+      "Parsed line " +
+      parsed.lineNumber +
+      ": val_loss " +
+      parsed.valLoss.toFixed(4) +
+      ", train_time " +
+      parsed.trainMs +
+      "ms (" +
+      parsedSeconds.toFixed(2) +
+      " seconds)."
+    );
+
     var payload = {
       user_id: session.user.id,
       account_email: email,
@@ -486,12 +503,11 @@
       track: "modded-nanogpt",
       run_description: (document.getElementById("run-description").value || "").trim(),
       contributors: (document.getElementById("contributors").value || "").trim() || null,
-      time_to_3_28_sec: recordTimeInput && recordTimeInput.value ? Number(recordTimeInput.value) : null,
-      run_log_url: (document.getElementById("run-log-url").value || "").trim() || null
+      time_to_3_28_sec: parsedSeconds
     };
 
-    if (!payload.run_description || !payload.time_to_3_28_sec || !payload.run_log_url) {
-      setSubmitStatus("Record time, description, and log URL are required. Contributors is optional.");
+    if (!payload.run_description || !payload.time_to_3_28_sec) {
+      setSubmitStatus("Record time and description are required. Contributors is optional.");
       return;
     }
 

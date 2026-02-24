@@ -27,7 +27,7 @@ create table if not exists public.runs (
   track text not null check (track = 'modded-nanogpt'),
   time_to_3_28_sec numeric(12, 2) not null check (time_to_3_28_sec > 0),
   run_description text not null,
-  run_log_url text not null,
+  run_log_url text,
   contributors text,
   created_at timestamptz not null default now()
 );
@@ -129,9 +129,6 @@ begin
   end if;
   if not exists (select 1 from public.runs where run_description is null) then
     alter table public.runs alter column run_description set not null;
-  end if;
-  if not exists (select 1 from public.runs where run_log_url is null) then
-    alter table public.runs alter column run_log_url set not null;
   end if;
 end $$;
 
