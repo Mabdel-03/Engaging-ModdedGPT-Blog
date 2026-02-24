@@ -15,10 +15,14 @@
   var adminSection = document.getElementById("admin-section");
   var pendingApprovalsWrap = document.getElementById("pending-approvals-wrap");
   var contributorFilterInput = document.getElementById("contributor-filter");
+  var hardwareFilterTypeSelect = document.getElementById("hardware-filter-type");
+  var hardwareFilterCountInput = document.getElementById("hardware-filter-count");
   var runForm = document.getElementById("run-form");
   var parseLogBtn = document.getElementById("parse-log-btn");
   var runLogPasteInput = document.getElementById("run-log-paste");
   var recordTimeInput = document.getElementById("time-to-328");
+  var gpuTypeSelect = document.getElementById("gpu-type");
+  var gpuCountInput = document.getElementById("gpu-count");
   var leaderboardTableWrap = document.getElementById("leaderboard-table-wrap");
   var allRunsCache = [];
 
@@ -108,7 +112,7 @@
   async function loadRuns() {
     var result = await client
       .from("runs")
-      .select("id, account_email, display_name, time_to_3_28_sec, run_description, contributors, created_at")
+      .select("id, account_email, display_name, time_to_3_28_sec, run_description, contributors, gpu_type, gpu_count, created_at")
       .order("created_at", { ascending: false });
 
     if (result.error) {
@@ -124,14 +128,30 @@
     return (run.contributors || "").toLowerCase().trim();
   }
 
+  function normalizeGpuType(value) {
+    return String(value || "").trim().toLowerCase();
+  }
+
   function applyContributorFilter() {
     var filterValue = (contributorFilterInput && contributorFilterInput.value ? contributorFilterInput.value : "").trim().toLowerCase();
-    if (!filterValue) {
-      renderLeaderboard(allRunsCache);
-      return;
-    }
+    var hardwareTypeFilter = normalizeGpuType(hardwareFilterTypeSelect && hardwareFilterTypeSelect.value ? hardwareFilterTypeSelect.value : "");
+    var hardwareCountValue = hardwareFilterCountInput && hardwareFilterCountInput.value ? Number(hardwareFilterCountInput.value) : NaN;
+    var hasHardwareCountFilter = !Number.isNaN(hardwareCountValue) && hardwareCountValue > 0;
+
     var filtered = allRunsCache.filter(function (run) {
-      return runContributorsText(run).includes(filterValue);
+      if (filterValue && !runContributorsText(run).includes(filterValue)) {
+        return false;
+      }
+      if (hardwareTypeFilter && normalizeGpuType(run.gpu_type) !== hardwareTypeFilter) {
+        return false;
+      }
+      if (hasHardwareCountFilter) {
+        var runGpuCount = Number(run.gpu_count);
+        if (Number.isNaN(runGpuCount) || runGpuCount !== hardwareCountValue) {
+          return false;
+        }
+      }
+      return true;
     });
     renderLeaderboard(filtered);
   }
@@ -187,6 +207,17 @@
     );
   }
 
+  function formatHardware(run) {
+    var gpuType = String(run.gpu_type || "").trim();
+    var gpuCount = Number(run.gpu_count);
+    var hasGpuCount = !Number.isNaN(gpuCount) && gpuCount > 0;
+
+    if (!gpuType && !hasGpuCount) return "-";
+    if (gpuType && hasGpuCount) return gpuType + " x" + gpuCount;
+    if (gpuType) return gpuType;
+    return gpuCount + "x GPU";
+  }
+
   function renderLeaderboard(runs) {
     var ranked = runs
       .filter(function (run) {
@@ -211,6 +242,7 @@
           "<td>" + (idx + 1) + "</td>" +
           "<td>" + formatRecordTime(run.time_to_3_28_sec) + "</td>" +
           "<td>" + (run.run_description || "-") + "</td>" +
+          "<td>" + formatHardware(run) + "</td>" +
           "<td>" + formatDate(run.created_at) + "</td>" +
           "<td>" + (run.contributors || run.display_name || run.account_email || "-") + "</td>" +
           "</tr>"
@@ -220,7 +252,7 @@
 
     leaderboardTableWrap.innerHTML =
       "<table><thead><tr>" +
-      "<th>#</th><th>Record time</th><th>Description</th><th>Date</th><th>Contributors</th>" +
+      "<th>#</th><th>Record time</th><th>Description</th><th>Hardware</th><th>Date</th><th>Contributors</th>" +
       "</tr></thead><tbody>" +
       rows +
       "</tbody></table>";
@@ -496,6 +528,13 @@
       " seconds)."
     );
 
+    var gpuType = normalizeGpuType(gpuTypeSelect && gpuTypeSelect.value ? gpuTypeSelect.value : "");
+    var gpuCount = gpuCountInput && gpuCountInput.value ? Number(gpuCountInput.value) : NaN;
+    if (!gpuType || Number.isNaN(gpuCount) || gpuCount <= 0) {
+      setSubmitStatus("GPU type and number of GPUs are required.");
+      return;
+    }
+
     var payload = {
       user_id: session.user.id,
       account_email: email,
@@ -503,6 +542,8 @@
       track: "modded-nanogpt",
       run_description: (document.getElementById("run-description").value || "").trim(),
       contributors: (document.getElementById("contributors").value || "").trim() || null,
+      gpu_type: gpuType,
+      gpu_count: Math.round(gpuCount),
       time_to_3_28_sec: parsedSeconds
     };
 
@@ -527,6 +568,8 @@
   if (signOutBtn) signOutBtn.addEventListener("click", signOut);
   if (parseLogBtn) parseLogBtn.addEventListener("click", parseLogAndFillRecordTime);
   if (contributorFilterInput) contributorFilterInput.addEventListener("input", applyContributorFilter);
+  if (hardwareFilterTypeSelect) hardwareFilterTypeSelect.addEventListener("change", applyContributorFilter);
+  if (hardwareFilterCountInput) hardwareFilterCountInput.addEventListener("input", applyContributorFilter);
   if (pendingApprovalsWrap) {
     pendingApprovalsWrap.addEventListener("click", function (evt) {
       var approveTarget = evt.target && evt.target.getAttribute("data-approve");

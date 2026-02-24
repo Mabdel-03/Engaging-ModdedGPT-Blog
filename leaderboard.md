@@ -6,7 +6,7 @@ permalink: /leaderboard/
 
 # MIT NanoGPT Speedrun Leaderboard
 
-Leaderboard for Poggio Lab experiments on Engaging. Anyone can view records. Sign in with Google and receive admin approval to submit runs. For submissions, paste your `.out` SLURM log content; no log URL is required.
+Leaderboard for Poggio Lab experiments on Engaging. Anyone can view records. Sign in with Google and receive admin approval to submit runs. For submissions, paste your `.out` SLURM log content; no log URL is required. Runs also track GPU hardware and can be filtered by hardware.
 
 <section id="leaderboard-auth" class="card">
   <h2>Sign In</h2>
@@ -38,6 +38,20 @@ Leaderboard for Poggio Lab experiments on Engaging. Anyone can view records. Sig
     <label for="run-description">Description</label>
     <input id="run-description" type="text" placeholder="Example: Added sparse attention gate + tuned batch schedule" required />
 
+    <label for="gpu-type">GPU Type</label>
+    <select id="gpu-type" required>
+      <option value="">Select GPU type</option>
+      <option value="h100">h100</option>
+      <option value="h200">h200</option>
+      <option value="a100">a100</option>
+      <option value="l40s">l40s</option>
+      <option value="rtx6000">rtx6000</option>
+      <option value="other">other</option>
+    </select>
+
+    <label for="gpu-count">Number of GPUs</label>
+    <input id="gpu-count" type="number" min="1" step="1" placeholder="2" required />
+
     <label for="contributors">Contributors (comma-separated, optional)</label>
     <input id="contributors" type="text" placeholder="jyoo, abrown, cchen" />
 
@@ -59,6 +73,18 @@ Leaderboard for Poggio Lab experiments on Engaging. Anyone can view records. Sig
   <h2>Public Record Table</h2>
   <label for="contributor-filter">Filter by contributor</label>
   <input id="contributor-filter" type="text" placeholder="e.g. jyoo or abrown" />
+  <label for="hardware-filter-type">Filter by GPU type</label>
+  <select id="hardware-filter-type">
+    <option value="">Any GPU type</option>
+    <option value="h100">h100</option>
+    <option value="h200">h200</option>
+    <option value="a100">a100</option>
+    <option value="l40s">l40s</option>
+    <option value="rtx6000">rtx6000</option>
+    <option value="other">other</option>
+  </select>
+  <label for="hardware-filter-count">Filter by GPU count</label>
+  <input id="hardware-filter-count" type="number" min="1" step="1" placeholder="Any count" />
   <div id="leaderboard-table-wrap"></div>
 </section>
 

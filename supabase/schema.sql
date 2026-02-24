@@ -25,6 +25,8 @@ create table if not exists public.runs (
   account_email text,
   display_name text,
   track text not null check (track = 'modded-nanogpt'),
+  gpu_type text,
+  gpu_count integer check (gpu_count is null or gpu_count > 0),
   time_to_3_28_sec numeric(12, 2) not null check (time_to_3_28_sec > 0),
   run_description text not null,
   run_log_url text,
@@ -35,6 +37,8 @@ create table if not exists public.runs (
 create index if not exists runs_created_at_idx on public.runs (created_at desc);
 create index if not exists runs_rank_idx on public.runs (time_to_3_28_sec asc);
 create index if not exists runs_track_idx on public.runs (track);
+create index if not exists runs_gpu_type_idx on public.runs (gpu_type);
+create index if not exists runs_gpu_count_idx on public.runs (gpu_count);
 create index if not exists profiles_approval_status_idx on public.profiles (approval_status);
 
 -- Backward-compatible upgrades for existing deployments.
@@ -50,6 +54,8 @@ alter table public.profiles alter column approval_status set default 'pending';
 alter table public.runs add column if not exists account_email text;
 alter table public.runs add column if not exists display_name text;
 alter table public.runs add column if not exists track text;
+alter table public.runs add column if not exists gpu_type text;
+alter table public.runs add column if not exists gpu_count integer;
 alter table public.runs add column if not exists time_to_3_28_sec numeric(12, 2);
 alter table public.runs add column if not exists run_description text;
 alter table public.runs add column if not exists run_log_url text;
@@ -85,8 +91,6 @@ alter table public.profiles drop column if exists mit_email cascade;
 
 alter table public.runs drop column if exists kerberos cascade;
 alter table public.runs drop column if exists mit_email cascade;
-alter table public.runs drop column if exists gpu_type cascade;
-alter table public.runs drop column if exists gpu_count cascade;
 alter table public.runs drop column if exists best_val_loss cascade;
 alter table public.runs drop column if exists mean_val_loss cascade;
 alter table public.runs drop column if exists p_value_328 cascade;
@@ -154,6 +158,20 @@ begin
     alter table public.runs
       add constraint runs_track_check
       check (track = 'modded-nanogpt');
+  end if;
+end $$;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'runs_gpu_count_check'
+      and conrelid = 'public.runs'::regclass
+  ) then
+    alter table public.runs
+      add constraint runs_gpu_count_check
+      check (gpu_count is null or gpu_count > 0);
   end if;
 end $$;
 
