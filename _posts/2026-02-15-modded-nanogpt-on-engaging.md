@@ -28,14 +28,21 @@ After you complete this guide, move to the companion guide for the speedrun path
 
 Engaging is a SLURM cluster. For this workflow, these partitions are typically useful:
 
-- `mit_normal_gpu` for GPU jobs.
-- `mit_preemptable` for longer baseline runs.
-- `mit_quicktest` for quick prep jobs.
+- `mit_normal_gpu` -- general GPU jobs (available to all users).
+- `mit_preemptable` -- longer baseline runs, may be preempted.
+- `mit_quicktest` -- quick prep jobs and short tests.
+
+Most users of this guide also have access to BCS and Poggio lab partitions, which provide a much larger GPU pool:
+
+- `ou_bcs_normal` / `ou_bcs_low` -- H100 x4 nodes (~9 nodes) and A100 x8 nodes (~20 nodes), 1-day time limit.
+- `pi_tpoggio` -- 8x A100 on node3807, 7-day time limit.
+
+If jobs targeting H100 sit in PENDING, try submitting to a BCS partition with A100 instead (see Section 7).
 
 Useful cluster commands:
 
 ```bash
-sinfo -o "%P %G %N %a" | rg gpu
+sinfo -o "%P %G %N %a" | grep gpu
 squeue -u "$USER"
 sacct -u "$USER" --format=JobID,JobName,Partition,State,Elapsed,ExitCode
 ```
@@ -104,6 +111,16 @@ git clone https://github.com/Mabdel-03/Engaging-NanoGPT.git
 cd Engaging-NanoGPT
 ```
 
+Verify you cloned the correct upstream repo:
+
+```bash
+git remote -v
+# origin  https://github.com/Mabdel-03/Engaging-NanoGPT.git (fetch)
+# origin  https://github.com/Mabdel-03/Engaging-NanoGPT.git (push)
+```
+
+If the URL points to a personal fork or a different repo, re-clone from the URL above. Working from the wrong origin is a common source of "files not found" confusion when pulling updates.
+
 Command convention for the rest of this guide:
 
 - After `cd Engaging-NanoGPT`, run commands from repo root unless a step explicitly says otherwise.
@@ -153,10 +170,22 @@ This validates that your scheduler, environment, and baseline code path all work
 sbatch slurm/nanogpt/prepare_shakespeare.sh
 ```
 
+Wait for the prep job to finish before submitting training:
+
+```bash
+squeue -u "$USER"
+```
+
 ### Step 2: Launch 1-GPU baseline sanity training
 
 ```bash
 GPU_TYPE=h100 sbatch --gres=gpu:${GPU_TYPE}:1 slurm/nanogpt/train_shakespeare.sh
+```
+
+If H100 jobs sit in PENDING, fall back to an A100 via a BCS partition:
+
+```bash
+GPU_TYPE=a100 sbatch -p ou_bcs_normal --gres=gpu:${GPU_TYPE}:1 slurm/nanogpt/train_shakespeare.sh
 ```
 
 ### Step 3: Monitor jobs and logs
@@ -171,6 +200,8 @@ tail -f logs/nanogpt-train-shakespeare-<jobid>.out
 
 This is one of the few steps where you intentionally leave repo root:
 
+Run sampling on a compute node (interactive `salloc` or a short batch job), not on a login node.
+
 ```bash
 cd nanogpt
 python sample.py --out_dir=../out/nanogpt-shakespeare
@@ -183,8 +214,20 @@ After sanity success, run the full baseline path.
 
 ### Step 1: Prepare OpenWebText tokens
 
+Check available disk space first (target at least ~120 GB free before full prep):
+
+```bash
+df -h .
+```
+
 ```bash
 sbatch slurm/nanogpt/prepare_openwebtext.sh
+```
+
+This prep step is download/tokenization heavy and does not require GPUs. If your account has access, submit it to a CPU partition to reduce GPU queue contention:
+
+```bash
+sbatch -p mit_normal slurm/nanogpt/prepare_openwebtext.sh
 ```
 
 ### Step 2: Launch default GPT-2 training
@@ -217,6 +260,26 @@ GPU_TYPE=h100 GPUS_PER_NODE=8 GRAD_ACC_STEPS=5 \
 sbatch --gres=gpu:${GPU_TYPE}:${GPUS_PER_NODE} slurm/nanogpt/train_gpt2.sh
 ```
 
+If H100 jobs are pending, use A100 via BCS:
+
+```bash
+# 1x A100
+GPU_TYPE=a100 GPUS_PER_NODE=1 GRAD_ACC_STEPS=40 \
+sbatch -p ou_bcs_normal --gres=gpu:${GPU_TYPE}:${GPUS_PER_NODE} slurm/nanogpt/train_gpt2.sh
+
+# 2x A100
+GPU_TYPE=a100 GPUS_PER_NODE=2 GRAD_ACC_STEPS=20 \
+sbatch -p ou_bcs_normal --gres=gpu:${GPU_TYPE}:${GPUS_PER_NODE} slurm/nanogpt/train_gpt2.sh
+
+# 4x A100
+GPU_TYPE=a100 GPUS_PER_NODE=4 GRAD_ACC_STEPS=10 \
+sbatch -p ou_bcs_normal --gres=gpu:${GPU_TYPE}:${GPUS_PER_NODE} slurm/nanogpt/train_gpt2.sh
+
+# 8x A100
+GPU_TYPE=a100 GPUS_PER_NODE=8 GRAD_ACC_STEPS=5 \
+sbatch -p ou_bcs_normal --gres=gpu:${GPU_TYPE}:${GPUS_PER_NODE} slurm/nanogpt/train_gpt2.sh
+```
+
 Important baseline note:
 
 - In baseline NanoGPT DDP, `gradient_accumulation_steps` must be divisible by `WORLD_SIZE`.
@@ -228,6 +291,10 @@ Important baseline note:
 cd /path/to/your/workspace
 git clone https://github.com/Mabdel-03/Engaging-NanoGPT.git
 cd Engaging-NanoGPT
+
+# 1b) Verify origin points to the correct upstream
+git remote -v
+# Should show: origin  https://github.com/Mabdel-03/Engaging-NanoGPT.git
 
 # 2) If conda exists, use it; otherwise install Miniforge
 conda --version || true
@@ -248,15 +315,24 @@ source activate_env.sh
 
 # 5) Baseline sanity path (prepare + train)
 sbatch slurm/nanogpt/prepare_shakespeare.sh
+# Wait until the prepare job completes before launching training:
+# squeue -u "$USER"
 GPU_TYPE=h100 sbatch --gres=gpu:${GPU_TYPE}:1 slurm/nanogpt/train_shakespeare.sh
+# If H100 is pending, fall back to A100 via BCS:
+# GPU_TYPE=a100 sbatch -p ou_bcs_normal --gres=gpu:${GPU_TYPE}:1 slurm/nanogpt/train_shakespeare.sh
 
 # 6) Baseline GPT-2 data + training
 sbatch slurm/nanogpt/prepare_openwebtext.sh
+# Wait until the OpenWebText prep job completes before launching GPT-2 training:
+# squeue -u "$USER"
 sbatch slurm/nanogpt/train_gpt2.sh
 
 # Baseline GPT-2 scale-up example (8 GPUs)
 GPU_TYPE=h100 GPUS_PER_NODE=8 GRAD_ACC_STEPS=5 \
 sbatch --gres=gpu:${GPU_TYPE}:${GPUS_PER_NODE} slurm/nanogpt/train_gpt2.sh
+# Or use 8x A100 via BCS:
+# GPU_TYPE=a100 GPUS_PER_NODE=8 GRAD_ACC_STEPS=5 \
+# sbatch -p ou_bcs_normal --gres=gpu:${GPU_TYPE}:${GPUS_PER_NODE} slurm/nanogpt/train_gpt2.sh
 ```
 
 ## 10) Baseline Completion Criteria (Before Guide 2)
@@ -313,6 +389,10 @@ python -c "import torch; print(torch.__version__)"
 
 - **OpenWebText prep download hiccups**
   - Retry in a fresh job; transient network failures happen.
+
+- **Skipped a prep step by mistake**
+  - `train_shakespeare.sh` and `train_gpt2.sh` include a data-missing fallback path, so they can self-prepare data when needed.
+  - This safety net is slower and less predictable than explicit prep jobs, so keep using the prep-first workflow for reliable runs.
 
 ---
 

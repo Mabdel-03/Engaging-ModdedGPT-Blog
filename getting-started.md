@@ -146,25 +146,51 @@ Official running-jobs docs:
 
 - [ORCD Running Jobs Overview](https://orcd-docs.mit.edu/running-jobs/overview/)
 
-## 9) GPU Partitions (General)
+## 9) GPU Partitions
 
-Useful general-purpose partitions often include:
+### Base Engaging partitions (available to all users)
 
-- `mit_normal_gpu`
-- `mit_preemptable`
-- `mit_quicktest`
+- `mit_normal_gpu` -- general GPU jobs.
+- `mit_preemptable` -- longer runs, may be preempted.
+- `mit_quicktest` -- fast turnaround for short tests and data prep.
 
-Inspect live partition + GPU availability:
+### BCS partitions (available to BCS-affiliated users)
+
+- `ou_bcs_normal` -- standard priority, 1-day time limit.
+- `ou_bcs_low` -- lower priority but largest pool, 1-day time limit.
+- `ou_bcs_high` -- highest priority, 4-hour time limit.
+
+BCS hardware:
+
+- H100 x4 per node (~9 nodes). Max 4 GPUs per job on a single H100 node.
+- A100 x8 per node (~20 nodes). Supports up to 8 GPUs per job on a single node.
+
+### Poggio lab partition
+
+- `pi_tpoggio` -- 8x A100 on node3807, 192 CPUs, ~1 TB RAM. 7-day time limit.
+
+### Checking availability
+
+Inspect live partition and GPU availability:
 
 ```bash
-sinfo -o "%P %G %N %a" | rg gpu
+sinfo -o "%P %G %N %a" | grep gpu
 ```
 
 Request GPUs via `--gres`, for example:
 
 ```bash
+# Request any available GPU
+sbatch --gres=gpu:1 my_job.sh
+
+# Request a specific GPU type
 sbatch --gres=gpu:h100:1 my_job.sh
+
+# Request a specific GPU type on a BCS partition
+sbatch -p ou_bcs_normal --gres=gpu:a100:1 my_job.sh
 ```
+
+If jobs targeting a specific GPU type sit in PENDING, check availability with `sinfo` and try a different GPU type or partition.
 
 ## 10) Poggio Lab Partition (`pi_tpoggio`)
 

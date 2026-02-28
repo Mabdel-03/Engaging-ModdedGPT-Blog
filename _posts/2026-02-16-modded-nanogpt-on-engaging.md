@@ -96,6 +96,8 @@ export ENV_PATH="$HOME/conda_envs/nanogpt_env"
 source activate_env.sh
 ```
 
+Partition note: Most users of this guide have access to BCS partitions (`ou_bcs_normal`, `ou_bcs_low`) in addition to `mit_normal_gpu`. BCS provides ~20 A100 x8 nodes and ~9 H100 x4 nodes. If H100 jobs sit in PENDING, use a BCS partition with A100 instead. Note that BCS H100 nodes have only 4 GPUs each, so 8-GPU runs must target A100 x8 nodes.
+
 ## 5) Prepare FineWeb Token Cache
 
 Default prep (9 train chunks + val):
@@ -110,10 +112,23 @@ Smaller quick-test prep:
 FINEWEB_CHUNKS=3 sbatch slurm/modded/prepare_fineweb.sh
 ```
 
+FineWeb prep is mostly CPU/network work and does not require GPUs. If available, use a CPU/quick partition for faster scheduling:
+
+```bash
+sbatch -p mit_normal slurm/modded/prepare_fineweb.sh
+FINEWEB_CHUNKS=3 sbatch -p mit_quicktest slurm/modded/prepare_fineweb.sh
+```
+
 ## 6) Optional: Build FlashAttention from Source
 
 ```bash
 GPU_TYPE=h100 sbatch --gres=gpu:${GPU_TYPE}:1 slurm/modded/build_flash_attn.sh
+```
+
+If H100 is not available, build on an A100 instead:
+
+```bash
+GPU_TYPE=a100 TORCH_CUDA_ARCH_LIST=8.0 sbatch -p ou_bcs_normal --gres=gpu:${GPU_TYPE}:1 slurm/modded/build_flash_attn.sh
 ```
 
 ## 7) Launch Speedrun Training
@@ -151,10 +166,24 @@ GPU_TYPE=h200 NUM_GPUS=8 \
 sbatch --gres=gpu:${GPU_TYPE}:${NUM_GPUS} slurm/modded/train_speedrun.sh
 ```
 
+A100 via BCS (when H100 is unavailable or pending):
+
+```bash
+# 1x A100
+GPU_TYPE=a100 NUM_GPUS=1 \
+sbatch -p ou_bcs_normal --gres=gpu:${GPU_TYPE}:${NUM_GPUS} --cpus-per-task=16 slurm/modded/train_speedrun.sh
+
+# 8x A100 (full speedrun)
+GPU_TYPE=a100 NUM_GPUS=8 \
+sbatch -p ou_bcs_normal --gres=gpu:${GPU_TYPE}:${NUM_GPUS} slurm/modded/train_speedrun.sh
+```
+
 Important:
 
 - This vendored script expects `world_size` in `{1, 2, 4, 8}`.
 - Recommended rollout is `1 -> 2/4 -> 8` GPUs so you catch config/runtime failures early.
+- BCS H100 nodes have only 4 GPUs each. For 8-GPU speedruns, target A100 x8 nodes via `ou_bcs_normal` or `ou_bcs_low`.
+- If jobs sit in PENDING, check availability with `sinfo -o "%P %G %N %a" | grep gpu` and try a different partition or GPU type.
 
 ## 8) Exact Command Sequence for the Modded Path
 
@@ -172,13 +201,22 @@ source activate_env.sh
 # 3) Prepare FineWeb cache
 sbatch slurm/modded/prepare_fineweb.sh
 
+# Wait until the FineWeb prep job completes before launching training:
+# squeue -u "$USER"
+
 # 4) Launch a small validation run first
 GPU_TYPE=h100 NUM_GPUS=1 \
-sbatch --gres=gpu:${GPU_TYPE}:${NUM_GPUS} slurm/modded/train_speedrun.sh
+sbatch --gres=gpu:${GPU_TYPE}:${NUM_GPUS} --cpus-per-task=16 slurm/modded/train_speedrun.sh
+# If H100 is pending, fall back to A100 via BCS:
+# GPU_TYPE=a100 NUM_GPUS=1 \
+# sbatch -p ou_bcs_normal --gres=gpu:${GPU_TYPE}:${NUM_GPUS} --cpus-per-task=16 slurm/modded/train_speedrun.sh
 
 # 5) Scale to full speedrun target
 GPU_TYPE=h100 NUM_GPUS=8 \
 sbatch --gres=gpu:${GPU_TYPE}:${NUM_GPUS} slurm/modded/train_speedrun.sh
+# Or use 8x A100 via BCS (BCS H100 nodes only have 4 GPUs):
+# GPU_TYPE=a100 NUM_GPUS=8 \
+# sbatch -p ou_bcs_normal --gres=gpu:${GPU_TYPE}:${NUM_GPUS} slurm/modded/train_speedrun.sh
 ```
 
 ## 9) Submission Checklist (For Lab Leaderboard)
@@ -191,7 +229,9 @@ Required fields:
 
 - Record time in seconds.
 - Short run description (what changed).
-- Log URL.
+- GPU type (for example `h100`, `h200`, or `a100`).
+- Number of GPUs.
+- Pasted `.out` log content (used by the leaderboard parser).
 
 Optional field:
 
@@ -250,6 +290,10 @@ python -c "import torch; print(torch.__version__)"
 
 - **FineWeb download issues**
   - Retry dataset prep in a new job.
+
+- **Skipped FineWeb prep by mistake**
+  - `train_speedrun.sh` checks for missing token cache and auto-downloads FineWeb chunks as a safety net.
+  - This fallback can consume your training wall-clock budget, so explicit prep-first is still the recommended workflow.
 
 ---
 
